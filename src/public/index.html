@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Original Software Engineering Jokes</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Original Software Engineering Jokes</h1>
+        <button id="generateJoke">Tell me a joke</button>
+        <div id="jokeContainer" style="display: none;">
+            <div id="generatingSpinner">
+                <div class="spinner"></div>
+                <div id="countdown">15</div>
+                <div id="progressBar">
+                    <div id="progressFill"></div>
+                </div>
+            </div>
+            <div class="face" style="display: none;">
+                <div class="face__eyes">
+                    <div class="face__eye"></div>
+                    <div class="face__eye"></div>
+                </div>
+                <div class="face__mouth">
+                    <div class="face__top"></div>
+                    <div class="face__bottom"></div>
+                    <div class="face__tongue"></div>
+                </div>
+            </div>
+            <div id="jokeText" style="display: none;"></div>
+            <audio id="jokeAudio" style="display: none;"></audio>
+            <div id="jokeControls" style="display: none;">
+                <button id="copyJoke">Copy to Clipboard</button>
+                <button id="replayJoke">Replay</button>
+                <div id="feedback">
+                    <p>Was this joke funny?</p>
+                    <button id="thumbsUp">👍</button>
+                    <button id="thumbsDown">👎</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
