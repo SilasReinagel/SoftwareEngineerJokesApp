@@ -110,11 +110,13 @@ const everydayContexts = [
 
 
 const jokePrompt = `
-  Tell me an original, short, very funny joke about a software engineer understandable by non-technical audiences in a non-software context. 
-  It should be as hilarious as possible. 
-  Joke ONLY - No preamble, not preachy.
+  Tell me 4 original, short, very funny jokes about a software engineer understandable by non-technical audiences in a non-software context. 
+  Each joke should be as hilarious as possible. 
+  Jokes ONLY - No preamble, not preachy.
   Use job titles / roles instead of names.
   For any acronyms, add a period between each letter.
+  Keep technical terms to a minimum.
+  Separate each joke with '---'.
   
   Scenario: [Scenario]`;
 
@@ -135,30 +137,72 @@ app.get('/generate-joke', async (req, res) => {
     try {
         console.log('Starting joke generation process');
 
-        console.log('Generating joke using Claude API');
+        const headers = {
+            'Content-Type': 'application/json',
+            'x-api-key': process.env.ANTHROPIC_API_KEY_JOKES_APP,
+            'anthropic-version': '2023-06-01'
+        };
+
+        const jokeScenarioPrompt = jokePrompt.replace('[Scenario]', everydayContexts[Math.floor(Math.random() * everydayContexts.length)])
+
+        console.log('Generating jokes using Claude API');
         const jokeResponse = await axios.post(
             'https://api.anthropic.com/v1/messages',
             {
                 model: 'claude-3-5-sonnet-20240620',
-                max_tokens: 600,
-                messages: [{ role: 'user', content: jokePrompt.replace('[Scenario]', everydayContexts[Math.floor(Math.random() * everydayContexts.length)]) }]
+                max_tokens: 2048,
+                messages: [{ role: 'user', content: jokeScenarioPrompt }]
             },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-api-key': process.env.ANTHROPIC_API_KEY_JOKES_APP,
-                    'anthropic-version': '2023-06-01'
-                }
-            }
+            { headers }
         );
 
-        const joke = jokeResponse.data.content[0].text;
-        console.log('Joke generated successfully');
+        const jokesFirstDraft = jokeResponse.data.content[0].text;
+        console.log('Jokes generated successfully');
+
+        // Ask Claude to critique its own jokes
+        console.log('Requesting joke critiques from Claude');
+        const critiqueResponse = await axios.post(
+            'https://api.anthropic.com/v1/messages',
+            {
+                model: 'claude-3-5-sonnet-20240620',
+                max_tokens: 2048,
+                messages: [
+                    { role: 'user', content: jokeScenarioPrompt },
+                    { role: 'assistant', content: jokesFirstDraft },
+                    { role: 'user', content: "Critique these jokes. For each joke, briefly assess if it's funny, original, and meets all the criteria specified in the prompt. Provide a quick rating out of 10 for humor. Identify which joke is the funniest." }
+                ]
+            },
+            { headers }
+        );
+
+        const critique = critiqueResponse.data.content[0].text;
+        console.log('Joke critiques received:', critique);
+
+        // Generate final draft based on jokes and critique
+        console.log('Generating final draft based on jokes and critique');
+        const finalDraftResponse = await axios.post(
+            'https://api.anthropic.com/v1/messages',
+            {
+                model: 'claude-3-5-sonnet-20240620',
+                max_tokens: 2048,
+                messages: [
+                    { role: 'user', content: jokeScenarioPrompt },
+                    { role: 'assistant', content: jokesFirstDraft },
+                    { role: 'user', content: "Critique these jokes. For each joke, briefly assess if it's funny, original, and meets all the criteria specified in the prompt. Provide a quick rating out of 10 for humor. Identify which joke is the funniest." },
+                    { role: 'assistant', content: critique },
+                    { role: 'user', content: "Based on your critique, please revise and improve the joke you identified as the funniest. Make sure it's even funnier, original, and meets all the criteria from the original prompt. Provide only the revised joke, without any explanations." }
+                ]
+            },
+            { headers }
+        );
+
+        const finalJoke = finalDraftResponse.data.content[0].text;
+        console.log('Final joke draft generated successfully');
 
         console.log('Generating audio using ElevenLabs API');
         const audioResponse = await axios.post(
             'https://api.elevenlabs.io/v1/text-to-speech/Rn9Yq7uum9irZ6RwppDN',
-            { text: joke },
+            { text: finalJoke },
             {
                 headers: {
                     'Content-Type': 'application/json',
@@ -174,7 +218,7 @@ app.get('/generate-joke', async (req, res) => {
         const audioUrl = `data:audio/mpeg;base64,${audioBase64}`;
 
         console.log('Joke generation process completed');
-        res.json({ joke, audioUrl });
+        res.json({ joke: finalJoke, audioUrl });
     } catch (error) {
         console.error('Error:', error);
         res.status(500).json({ error: 'An error occurred while generating the joke.' });
